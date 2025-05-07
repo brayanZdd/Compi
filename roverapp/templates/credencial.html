@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credencial UMG Basic Rover 2.0</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+
+        .credencial {
+            width: 800px;
+            height: 500px;
+            margin: 20px auto;
+            background: linear-gradient(135deg, #0033a0 0%, #00a1e0 100%);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            color: white;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+        .header img {
+            height: 60px;
+        }
+
+        .header h1 {
+            margin: 10px 0 0;
+            font-size: 24px;
+            text-transform: uppercase;
+        }
+
+        .content {
+            display: flex;
+            padding: 30px;
+        }
+
+        .left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 5px solid white;
+            object-fit: cover;
+            margin-bottom: 20px;
+        }
+
+        .right {
+            flex: 1;
+            padding-left: 30px;
+            border-left: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .info {
+            margin-bottom: 15px;
+        }
+
+        .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            opacity: 0.7;
+        }
+
+        .value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .qr-code {
+            display: block;
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.2);
+            font-size: 12px;
+        }
+
+        .decoration {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            z-index: 0;
+        }
+
+        .decoration-1 {
+            top: -100px;
+            right: -50px;
+        }
+
+        .decoration-2 {
+            bottom: -80px;
+            left: -80px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="credencial">
+        <div class="decoration decoration-1"></div>
+        <div class="decoration decoration-2"></div>
+
+        <div class="header">
+            <img src="/static/images/logo_umg.png" alt="UMG Logo">
+            <h1>Credencial de Acceso</h1>
+            <p>UMG Basic Rover 2.0</p>
+        </div>
+
+        <div class="content">
+            <div class="left">
+                <img src="data:image/png;base64,{{ usuario.avatar }}" alt="{{ usuario.nickname }}" class="avatar">
+                <h3>{{ usuario.nickname }}</h3>
+                <p>Aspirante Conductor</p>
+            </div>
+
+            <div class="right">
+                <div class="info">
+                    <div class="label">Nombre Completo</div>
+                    <div class="value">{{ usuario.nombre }}</div>
+                </div>
+
+                <div class="info">
+                    <div class="label">Correo Electrónico</div>
+                    <div class="value">{{ usuario.correo }}</div>
+                </div>
+
+                <div class="info">
+                    <div class="label">ID de Conductor</div>
+                    <div class="value">{{ usuario.id_usuario }}</div>
+                </div>
+
+                <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code" class="qr-code">
+            </div>
+        </div>
+
+        <div class="footer">
+            Universidad Mariano Gálvez - Ingeniería en Sistemas - Compiladores - Grupo 7 - 2025
+        </div>
+    </div>
+</body>
+
+</html>

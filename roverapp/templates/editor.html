@@ -1,0 +1,1386 @@
+{% extends 'base.html' %}
+
+{% block title %}Editor UMG++{% endblock %}
+
+{% block extra_css %}
+.editor-container {
+display: flex;
+height: calc(100vh - 200px);
+min-height: 500px;
+}
+
+.code-editor {
+flex: 7;
+display: flex;
+flex-direction: column;
+border-right: 1px solid #ddd;
+}
+
+#editor {
+flex-grow: 1;
+width: 100%;
+height: 100%;
+font-size: 16px;
+}
+
+.simulation-area {
+flex: 5;
+background-color: #f9f9f9;
+display: flex;
+flex-direction: column;
+}
+
+.simulation-canvas {
+flex-grow: 1;
+width: 100%;
+background-color: #111;
+position: relative;
+overflow: hidden;
+}
+
+.console-area {
+height: 150px;
+background-color: #1e1e1e;
+color: #f8f8f8;
+font-family: monospace;
+padding: 10px;
+overflow-y: auto;
+}
+
+.console-line {
+margin: 0;
+padding: 2px 0;
+}
+
+.console-error {
+color: #f56c6c;
+}
+
+.console-warning {
+color: #e6a23c;
+}
+
+.console-success {
+color: #67c23a;
+}
+
+.console-info {
+color: #409eff;
+}
+
+.toolbar {
+display: flex;
+padding: 10px;
+background-color: #f1f1f1;
+border-bottom: 1px solid #ddd;
+}
+
+.toolbar button {
+margin-right: 10px;
+}
+
+.rover {
+position: absolute;
+width: 30px;
+height: 30px;
+background-color: #ff0000;
+border-radius: 50%;
+transform: translate(-50%, -50%);
+transition: transform 0.5s linear;
+}
+
+.rover:after {
+content: '';
+position: absolute;
+width: 0;
+height: 0;
+top: -10px;
+left: 50%;
+transform: translateX(-50%);
+border-left: 8px solid transparent;
+border-right: 8px solid transparent;
+border-bottom: 12px solid #ff0000;
+}
+
+#rover-container {
+position: relative;
+width: 100%;
+height: 100%;
+overflow: hidden;
+}
+
+.grid {
+position: absolute;
+width: 100%;
+height: 100%;
+background-size: 50px 50px;
+background-image:
+linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+}
+
+.controls {
+position: absolute;
+bottom: 10px;
+right: 10px;
+display: flex;
+flex-direction: column;
+z-index: 100;
+}
+
+.controls button {
+margin-bottom: 5px;
+}
+
+.rover-controls {
+display: flex;
+flex-direction: column;
+align-items: center;
+margin-top: 10px;
+padding: 10px;
+background-color: #f8f8f8;
+border: 1px solid #ddd;
+border-radius: 5px;
+}
+
+.rover-controls h3 {
+margin-top: 0;
+}
+
+.rover-controls-btns {
+display: grid;
+grid-template-columns: 1fr 1fr 1fr;
+grid-gap: 5px;
+margin-top: 10px;
+}
+
+.rover-controls-btns button {
+font-size: 18px;
+padding: 10px;
+}
+
+.btn-stop {
+grid-column: 2;
+background-color: #dc3545 !important;
+color: white !important;
+}
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Editor UMG++</h1>
+    <div class="btn-group">
+        <button id="btn-new" class="btn btn-outline-secondary">
+            <i class="fas fa-file"></i> Nuevo
+        </button>
+        <button id="btn-open" class="btn btn-outline-secondary">
+            <i class="fas fa-folder-open"></i> Abrir
+        </button>
+        <button id="btn-save" class="btn btn-outline-secondary">
+            <i class="fas fa-save"></i> Guardar
+        </button>
+        <button id="btn-save-as" class="btn btn-outline-secondary">
+            <i class="fas fa-download"></i> Guardar como
+        </button>
+    </div>
+</div>
+
+<div class="btn-group mb-3">
+    <button id="btn-compile" class="btn btn-primary">
+        <i class="fas fa-code"></i> Compilar
+    </button>
+    <button id="btn-simulate" class="btn btn-success">
+        <i class="fas fa-play"></i> Simular
+    </button>
+    <button id="btn-execute" class="btn btn-danger">
+        <i class="fas fa-robot"></i> Ejecutar (enviar al Rover)
+    </button>
+</div>
+
+<div class="dropdown mb-3">
+    <button class="btn btn-info dropdown-toggle" type="button" id="coreografiasDropdown" data-bs-toggle="dropdown"
+        aria-expanded="false">
+        <i class="fas fa-music"></i> Coreografías
+    </button>
+    <ul class="dropdown-menu" aria-labelledby="coreografiasDropdown">
+        <li><a class="dropdown-item" href="#" data-coreografia="coreografia1">Coreografía 1: Robot Dance</a></li>
+        <li><a class="dropdown-item" href="#" data-coreografia="coreografia2">Coreografía 2: Moonwalk Magic</a></li>
+        <li><a class="dropdown-item" href="#" data-coreografia="coreografia3">Coreografía 3: Geometría Rítmica</a></li>
+    </ul>
+</div>
+
+<div class="editor-container">
+    <div class="code-editor">
+        <div id="editor">PROGRAM mi_programa
+            BEGIN
+            avanzar_mts(1);
+            girar(1) + avanzar_ctms(50);
+            girar(-1) + avanzar_ctms(50);
+            circulo(50);
+            cuadrado(100);
+            rotar(2);
+            moonwalk(5);
+            END.</div>
+    </div>
+
+    <div class="simulation-area">
+        <div class="simulation-canvas">
+            <div id="rover-container">
+                <div class="grid"></div>
+                <div id="rover" class="rover" style="left: 50%; top: 50%;"></div>
+                <div class="controls">
+                    <button id="btn-zoom-in" class="btn btn-sm btn-light">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button id="btn-zoom-out" class="btn btn-sm btn-light">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button id="btn-reset-view" class="btn btn-sm btn-light
+                    <button id=" btn-reset-view" class="btn btn-sm btn-light">
+                        <i class="fas fa-home"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="rover-controls">
+            <h3>Control Directo del Rover</h3>
+            <div class="rover-controls-btns">
+                <button id="btn-empty" class="btn"></button>
+                <button id="btn-forward" class="btn btn-primary">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <button id="btn-empty2" class="btn"></button>
+
+                <button id="btn-left" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button id="btn-stop" class="btn btn-stop">
+                    <i class="fas fa-stop"></i>
+                </button>
+                <button id="btn-right" class="btn btn-primary">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+
+                <button id="btn-empty3" class="btn"></button>
+                <button id="btn-backward" class="btn btn-primary">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+                <button id="btn-empty4" class="btn"></button>
+            </div>
+            <div id="rover-status" class="mt-2">
+                Estado: <span class="badge bg-secondary">Desconectado</span>
+            </div>
+        </div>
+
+        <div class="console-area">
+            <p class="console-line console-info">Console iniciada. Esperando comandos...</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para guardar archivo -->
+<div class="modal fade" id="saveModal" tabindex="-1" aria-labelledby="saveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="saveModalLabel">Guardar programa</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="filename" class="form-label">Nombre del archivo</label>
+                    <input type="text" class="form-control" id="filename" placeholder="mi_programa" value="mi_programa">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-confirm-save">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Input para abrir archivo (oculto) -->
+<input type="file" id="file-input" accept=".umgpp" style="display: none;">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.9.6/ace.js"></script>
+<script>
+    // Inicializar el editor Ace
+    const editor = ace.edit("editor");
+    editor.setTheme("ace/theme/monokai");
+    editor.session.setMode("ace/mode/text");
+    editor.setShowPrintMargin(false);
+
+    // Definir un modo personalizado para UMG++
+    define("ace/mode/umgpp", function (require, exports, module) {
+        var TextMode = require("ace/mode/text").Mode;
+        var TextHighlightRules = require("ace/mode/text_highlight_rules").TextHighlightRules;
+
+        var UMGPPHighlightRules = function () {
+            this.$rules = {
+                start: [
+                    {
+                        token: "keyword",
+                        regex: "\\b(PROGRAM|BEGIN|END)\\b"
+                    },
+                    {
+                        token: "support.function",
+                        regex: "\\b(avanzar_vlts|avanzar_ctms|avanzar_mts|girar|circulo|cuadrado|rotar|caminar|moonwalk)\\b"
+                    },
+                    {
+                        token: "constant.numeric",
+                        regex: "\\b[0-9]+\\b"
+                    },
+                    {
+                        token: "paren.lparen",
+                        regex: "[\\(\\{]"
+                    },
+                    {
+                        token: "paren.rparen",
+                        regex: "[\\)\\}]"
+                    },
+                    {
+                        token: "punctuation.operator",
+                        regex: "[;\\+\\.]"
+                    }
+                ]
+            };
+        };
+
+        UMGPPHighlightRules.prototype = new TextHighlightRules();
+
+        var Mode = function () {
+            this.HighlightRules = UMGPPHighlightRules;
+        };
+        Mode.prototype = new TextMode();
+
+        exports.Mode = Mode;
+    });
+
+    editor.session.setMode("ace/mode/umgpp");
+
+    // Variables para la simulación
+    let roverX = 250;
+    let roverY = 250;
+    let roverAngle = 0;
+    let zoomLevel = 1;
+    let currentProgram = null;
+    let isSimulating = false;
+
+    // Elementos del DOM
+    const rover = document.getElementById('rover');
+    const roverContainer = document.getElementById('rover-container');
+    const consoleArea = document.querySelector('.console-area');
+    const btnCompile = document.getElementById('btn-compile');
+    const btnSimulate = document.getElementById('btn-simulate');
+    const btnExecute = document.getElementById('btn-execute');
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+    const btnResetView = document.getElementById('btn-reset-view');
+    const btnNew = document.getElementById('btn-new');
+    const btnOpen = document.getElementById('btn-open');
+    const btnSave = document.getElementById('btn-save');
+    const btnSaveAs = document.getElementById('btn-save-as');
+    const fileInput = document.getElementById('file-input');
+    const saveModal = new bootstrap.Modal(document.getElementById('saveModal'));
+    const btnConfirmSave = document.getElementById('btn-confirm-save');
+    const filenameInput = document.getElementById('filename');
+    const coreografiaLinks = document.querySelectorAll('[data-coreografia]');
+
+    // Botones de control directo del rover
+    const btnForward = document.getElementById('btn-forward');
+    const btnBackward = document.getElementById('btn-backward');
+    const btnLeft = document.getElementById('btn-left');
+    const btnRight = document.getElementById('btn-right');
+    const btnStop = document.getElementById('btn-stop');
+    const roverStatus = document.getElementById('rover-status');
+
+    // Función para agregar mensaje a la consola
+    function logToConsole(message, type = 'info') {
+        const line = document.createElement('p');
+        line.className = `console-line console-${type}`;
+        line.textContent = message;
+        consoleArea.appendChild(line);
+        consoleArea.scrollTop = consoleArea.scrollHeight;
+    }
+
+    // Funciones para la simulación
+    function resetRover() {
+        roverX = 250;
+        roverY = 250;
+        roverAngle = 0;
+        updateRoverPosition();
+    }
+
+    function updateRoverPosition() {
+        rover.style.left = `${roverX}px`;
+        rover.style.top = `${roverY}px`;
+        rover.style.transform = `translate(-50%, -50%) rotate(${roverAngle}deg)`;
+    }
+
+    function setZoom(level) {
+        zoomLevel = Math.max(0.5, Math.min(3, level));
+        roverContainer.style.transform = `scale(${zoomLevel})`;
+    }
+
+    // Analizar léxicamente el código
+    function lexer(code) {
+        const tokens = [];
+        let errors = [];
+
+        // Definir expresiones regulares para los tokens
+        const tokenRegexes = [
+            { type: 'KEYWORD', regex: /\b(PROGRAM|BEGIN|END)\b/ },
+            { type: 'IDENTIFIER', regex: /\b[a-zA-Z_][a-zA-Z0-9_]*\b/ },
+            { type: 'FUNCTION', regex: /\b(avanzar_vlts|avanzar_ctms|avanzar_mts|girar|circulo|cuadrado|rotar|caminar|moonwalk)\b/ },
+            { type: 'NUMBER', regex: /-?\d+/ },
+            { type: 'LPAREN', regex: /\(/ },
+            { type: 'RPAREN', regex: /\)/ },
+            { type: 'SEMICOLON', regex: /;/ },
+            { type: 'PLUS', regex: /\+/ },
+            { type: 'DOT', regex: /\./ },
+            { type: 'WHITESPACE', regex: /\s+/ }
+        ];
+
+        // Analizar el código línea por línea
+        const lines = code.split('\n');
+        for (let lineNumber = 0; lineNumber < lines.length; lineNumber++) {
+            const line = lines[lineNumber];
+            let position = 0;
+
+            while (position < line.length) {
+                let match = false;
+
+                for (const { type, regex } of tokenRegexes) {
+                    const result = regex.exec(line.substring(position));
+
+                    if (result && result.index === 0) {
+                        const value = result[0];
+
+                        if (type !== 'WHITESPACE') {
+                            tokens.push({
+                                type,
+                                value,
+                                line: lineNumber + 1,
+                                column: position + 1
+                            });
+                        }
+
+                        position += value.length;
+                        match = true;
+                        break;
+                    }
+                }
+
+                if (!match) {
+                    errors.push({
+                        message: `Carácter no reconocido: "${line[position]}"`,
+                        line: lineNumber + 1,
+                        column: position + 1
+                    });
+                    position++;
+                }
+            }
+        }
+
+        return { tokens, errors };
+    }
+
+    // Analizar sintácticamente los tokens
+    function parser(tokens) {
+        let position = 0;
+        let errors = [];
+
+        // Verificar si el token actual coincide con el tipo esperado
+        function match(expectedType) {
+            if (position < tokens.length && tokens[position].type === expectedType) {
+                return tokens[position++];
+            }
+            return null;
+        }
+
+        // Reportar un error sintáctico
+        function syntaxError(expected) {
+            const token = position < tokens.length ? tokens[position] : tokens[tokens.length - 1];
+            errors.push({
+                message: `Error de sintaxis: se esperaba ${expected}, pero se encontró "${token.value}"`,
+                line: token.line,
+                column: token.column
+            });
+            position++;
+            return null;
+        }
+
+        // Analizar un programa
+        function parseProgram() {
+            if (!match('KEYWORD') || tokens[position - 1].value !== 'PROGRAM') {
+                return syntaxError('PROGRAM');
+            }
+
+            const programName = match('IDENTIFIER');
+            if (!programName) {
+                return syntaxError('un nombre de programa');
+            }
+
+            if (!match('KEYWORD') || tokens[position - 1].value !== 'BEGIN') {
+                return syntaxError('BEGIN');
+            }
+
+            const instructions = [];
+            while (position < tokens.length &&
+                !(tokens[position].type === 'KEYWORD' && tokens[position].value === 'END')) {
+                const instruction = parseInstruction();
+                if (instruction) {
+                    instructions.push(instruction);
+                } else {
+                    // Si hay un error en una instrucción, avanzamos hasta el próximo punto y coma
+                    while (position < tokens.length && tokens[position].type !== 'SEMICOLON') {
+                        position++;
+                    }
+                    if (position < tokens.length) position++;
+                }
+            }
+
+            if (!match('KEYWORD') || tokens[position - 1].value !== 'END') {
+                return syntaxError('END');
+            }
+
+            if (!match('DOT')) {
+                return syntaxError('un punto (.) para finalizar el programa');
+            }
+
+            return {
+                type: 'program',
+                name: programName.value,
+                instructions
+            };
+        }
+
+        // Analizar una instrucción
+        function parseInstruction() {
+            const functionOrGirar = position < tokens.length && tokens[position].type === 'FUNCTION' ? tokens[position] : null;
+
+            if (functionOrGirar && functionOrGirar.value === 'girar') {
+                return parseGirarCombination();
+            } else if (functionOrGirar) {
+                const func = match('FUNCTION');
+
+                if (!match('LPAREN')) {
+                    return syntaxError('un paréntesis de apertura (');
+                }
+
+                const paramToken = match('NUMBER');
+                if (!paramToken) {
+                    return syntaxError('un número entero');
+                }
+
+                if (!match('RPAREN')) {
+                    return syntaxError('un paréntesis de cierre )');
+                }
+
+                if (!match('SEMICOLON')) {
+                    return syntaxError('un punto y coma (;) para finalizar la instrucción');
+                }
+
+                return {
+                    type: 'instruction',
+                    function: func.value,
+                    parameter: parseInt(paramToken.value, 10)
+                };
+            }
+
+            return syntaxError('una instrucción válida');
+        }
+
+        // Analizar una combinación de girar + avanzar
+        function parseGirarCombination() {
+            let girarInstructions = [];
+            let advanceInstruction = null;
+
+            // Primer girar
+            const firstGirar = match('FUNCTION');
+
+            if (!match('LPAREN')) {
+                return syntaxError('un paréntesis de apertura (');
+            }
+
+            const firstParam = match('NUMBER');
+            if (!firstParam) {
+                return syntaxError('un número entero');
+            }
+
+            if (!match('RPAREN')) {
+                return syntaxError('un paréntesis de cierre )');
+            }
+
+            girarInstructions.push({
+                function: firstGirar.value,
+                parameter: parseInt(firstParam.value, 10)
+            });
+
+            // Buscar combinaciones de + girar o + avanzar_*
+            while (match('PLUS')) {
+                const nextFunction = match('FUNCTION');
+                if (!nextFunction) {
+                    return syntaxError('una función válida después del signo +');
+                }
+
+                if (!match('LPAREN')) {
+                    return syntaxError('un paréntesis de apertura (');
+                }
+
+                const param = match('NUMBER');
+                if (!param) {
+                    return syntaxError('un número entero');
+                }
+
+                if (!match('RPAREN')) {
+                    return syntaxError('un paréntesis de cierre )');
+                }
+
+                if (nextFunction.value === 'girar') {
+                    girarInstructions.push({
+                        function: nextFunction.value,
+                        parameter: parseInt(param.value, 10)
+                    });
+                } else if (['avanzar_vlts', 'avanzar_ctms', 'avanzar_mts'].includes(nextFunction.value)) {
+                    advanceInstruction = {
+                        function: nextFunction.value,
+                        parameter: parseInt(param.value, 10)
+                    };
+                    break;
+                } else {
+                    return syntaxError('una función girar o avanzar_* después del signo +');
+                }
+            }
+
+            if (!match('SEMICOLON')) {
+                return syntaxError('un punto y coma (;) para finalizar la instrucción');
+            }
+
+            return {
+                type: 'giro_combination',
+                giros: girarInstructions,
+                advance: advanceInstruction
+            };
+        }
+
+        const program = parseProgram();
+
+        if (position < tokens.length) {
+            errors.push({
+                message: 'Hay tokens adicionales después del final del programa',
+                line: tokens[position].line,
+                column: tokens[position].column
+            });
+        }
+
+        return { program, errors };
+    }
+
+    // Función para compilar el código
+    function compile() {
+        const code = editor.getValue();
+        logToConsole('Iniciando compilación...', 'info');
+
+        // Análisis léxico
+        const { tokens, errors: lexErrors } = lexer(code);
+
+        if (lexErrors.length > 0) {
+            lexErrors.forEach(error => {
+                logToConsole(`Error en línea ${error.line}, columna ${error.column}: ${error.message}`, 'error');
+            });
+            return null;
+        }
+
+        logToConsole('Análisis léxico completado. Tokens encontrados: ' + tokens.length, 'success');
+
+        // Análisis sintáctico
+        const { program, errors: parseErrors } = parser(tokens);
+
+        if (parseErrors.length > 0) {
+            parseErrors.forEach(error => {
+                logToConsole(`Error en línea ${error.line}, columna ${error.column}: ${error.message}`, 'error');
+            });
+            return null;
+        }
+
+        logToConsole('Análisis sintáctico completado con éxito.', 'success');
+
+        // Análisis semántico
+        const semanticErrors = [];
+
+        // Verificar cada instrucción
+        if (program && program.instructions) {
+            program.instructions.forEach(instruction => {
+                if (instruction.type === 'instruction') {
+                    // Validar parámetros según la función
+                    const { function: func, parameter } = instruction;
+
+                    if (func === 'avanzar_vlts' || func === 'avanzar_ctms' || func === 'avanzar_mts' ||
+                        func === 'rotar' || func === 'caminar' || func === 'moonwalk') {
+                        if (parameter === 0) {
+                            semanticErrors.push({
+                                message: `Error semántico: El parámetro para ${func} no puede ser 0`,
+                                instruction
+                            });
+                        }
+                    } else if (func === 'girar') {
+                        if (parameter !== -1 && parameter !== 0 && parameter !== 1) {
+                            semanticErrors.push({
+                                message: `Error semántico: El parámetro para ${func} debe ser -1, 0 o 1`,
+                                instruction
+                            });
+                        }
+                    } else if (func === 'circulo' || func === 'cuadrado') {
+                        if (parameter < 10 || parameter > 200) {
+                            semanticErrors.push({
+                                message: `Error semántico: El parámetro para ${func} debe estar entre 10 y 200 centímetros`,
+                                instruction
+                            });
+                        }
+                    }
+                } else if (instruction.type === 'giro_combination') {
+                    // Validar parámetros en combinaciones de giro
+                    instruction.giros.forEach(giro => {
+                        if (giro.parameter !== -1 && giro.parameter !== 0 && giro.parameter !== 1) {
+                            semanticErrors.push({
+                                message: `Error semántico: El parámetro para girar debe ser -1, 0 o 1`,
+                                instruction
+                            });
+                        }
+                    });
+
+                    if (instruction.advance) {
+                        const { function: func, parameter } = instruction.advance;
+                        if (parameter === 0) {
+                            semanticErrors.push({
+                                message: `Error semántico: El parámetro para ${func} no puede ser 0`,
+                                instruction
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        if (semanticErrors.length > 0) {
+            semanticErrors.forEach(error => {
+                logToConsole(error.message, 'error');
+            });
+            return null;
+        }
+
+        logToConsole('Análisis semántico completado con éxito.', 'success');
+        logToConsole('Compilación terminada sin errores.', 'success');
+
+        return program;
+    }
+
+    // Código continúa en la próxima parte...
+
+    // Función para simular el programa
+    function simulate(program) {
+        if (!program) return;
+
+        resetRover();
+        logToConsole('Iniciando simulación...', 'info');
+        isSimulating = true;
+
+        // Función para ejecutar una instrucción tras un retraso
+        function executeWithDelay(instructions, index) {
+            if (index >= instructions.length || !isSimulating) {
+                logToConsole('Simulación completada.', 'success');
+                isSimulating = false;
+                return;
+            }
+
+            const instruction = instructions[index];
+            executeInstruction(instruction);
+
+            setTimeout(() => {
+                executeWithDelay(instructions, index + 1);
+            }, 1000);
+        }
+
+        // Ejecutar la simulación
+        executeWithDelay(program.instructions, 0);
+    }
+
+    // Función para ejecutar una instrucción específica
+    function executeInstruction(instruction) {
+        if (instruction.type === 'instruction') {
+            const { function: func, parameter } = instruction;
+            logToConsole(`Ejecutando: ${func}(${parameter})`, 'info');
+
+            switch (func) {
+                case 'avanzar_vlts':
+                    // Supongamos que una vuelta son 20px
+                    moveRover(parameter * 20);
+                    break;
+                case 'avanzar_ctms':
+                    // 1 centímetro = 1 píxel en nuestra simulación
+                    moveRover(parameter);
+                    break;
+                case 'avanzar_mts':
+                    // 1 metro = 100 píxeles
+                    moveRover(parameter * 100);
+                    break;
+                case 'girar':
+                    if (parameter === 1) {
+                        roverAngle += 90;
+                    } else if (parameter === -1) {
+                        roverAngle -= 90;
+                    }
+                    updateRoverPosition();
+                    break;
+                case 'circulo':
+                    drawCircle(parameter);
+                    break;
+                case 'cuadrado':
+                    drawSquare(parameter);
+                    break;
+                case 'rotar':
+                    rotateRover(parameter);
+                    break;
+                case 'caminar':
+                    walkRover(parameter);
+                    break;
+                case 'moonwalk':
+                    moonwalkRover(parameter);
+                    break;
+            }
+        } else if (instruction.type === 'giro_combination') {
+            let totalGiro = 0;
+
+            // Aplicar todos los giros
+            instruction.giros.forEach(giro => {
+                logToConsole(`Ejecutando: girar(${giro.parameter})`, 'info');
+                if (giro.parameter === 1) {
+                    totalGiro += 90;
+                } else if (giro.parameter === -1) {
+                    totalGiro -= 90;
+                }
+            });
+
+            roverAngle += totalGiro;
+            updateRoverPosition();
+
+            // Aplicar el avance si existe
+            if (instruction.advance) {
+                const { function: func, parameter } = instruction.advance;
+                logToConsole(`Ejecutando: ${func}(${parameter})`, 'info');
+
+                switch (func) {
+                    case 'avanzar_vlts':
+                        moveRover(parameter * 20);
+                        break;
+                    case 'avanzar_ctms':
+                        moveRover(parameter);
+                        break;
+                    case 'avanzar_mts':
+                        moveRover(parameter * 100);
+                        break;
+                }
+            }
+        }
+    }
+
+    // Funciones para mover el rover
+    function moveRover(distance) {
+        const radians = roverAngle * Math.PI / 180;
+        roverX += Math.cos(radians) * distance;
+        roverY += Math.sin(radians) * distance;
+        updateRoverPosition();
+    }
+
+    function drawCircle(radius) {
+        // Simulación simple de dibujar un círculo
+        const originalX = roverX;
+        const originalY = roverY;
+
+        for (let i = 0; i < 360; i += 10) {
+            const radians = i * Math.PI / 180;
+            roverX = originalX + radius * Math.cos(radians);
+            roverY = originalY + radius * Math.sin(radians);
+            updateRoverPosition();
+        }
+
+        // Volver a la posición original
+        roverX = originalX;
+        roverY = originalY;
+        updateRoverPosition();
+    }
+
+    function drawSquare(side) {
+        // Guardar posición y ángulo original
+        const originalX = roverX;
+        const originalY = roverY;
+        const originalAngle = roverAngle;
+
+        // Dibujar cuadrado
+        for (let i = 0; i < 4; i++) {
+            moveRover(side);
+            roverAngle += 90;
+            updateRoverPosition();
+        }
+
+        // Restaurar ángulo original
+        roverAngle = originalAngle;
+        updateRoverPosition();
+    }
+
+    function rotateRover(turns) {
+        // Simulación de rotación sobre su propio eje
+        roverAngle += turns * 360;
+        updateRoverPosition();
+    }
+
+    function walkRover(steps) {
+        // Simulación de una caminata
+        const direction = steps > 0 ? 1 : -1;
+        const absoluteSteps = Math.abs(steps);
+
+        for (let i = 0; i < absoluteSteps; i++) {
+            // Avanzar un poco
+            moveRover(10 * direction);
+            // Simular un "paso" moviendo ligeramente a los lados
+            if (i % 2 === 0) {
+                roverX += 5;
+            } else {
+                roverX -= 5;
+            }
+            updateRoverPosition();
+        }
+    }
+
+    function moonwalkRover(steps) {
+        // Simulación del moonwalk
+        const direction = steps > 0 ? 1 : -1;
+        const absoluteSteps = Math.abs(steps);
+
+        for (let i = 0; i < absoluteSteps; i++) {
+            // Moonwalk: parece que avanza hacia adelante pero en realidad retrocede
+            moveRover(-10 * direction);
+            // Simular el deslizamiento lateral del moonwalk
+            if (i % 2 === 0) {
+                roverX += 8;
+            } else {
+                roverX -= 8;
+            }
+            updateRoverPosition();
+        }
+    }
+
+    // Funciones para interactuar con el rover real (ESP8266)
+    // Estas funciones envían solicitudes HTTP al ESP8266 para controlar el rover físico
+
+    // Función para enviar un comando al rover
+    function enviarComandoRover(comando) {
+        return fetch(`/api/rover/enviar-comando/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ comando })
+        })
+            .then(response => response.json())
+            .catch(error => {
+                console.error('Error al enviar comando:', error);
+                return { success: false, message: 'Error de conexión' };
+            });
+    }
+
+    // Función para detener el rover
+    function detenerRover() {
+        return fetch(`/api/rover/detener/`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+            .then(response => response.json())
+            .catch(error => {
+                console.error('Error al detener rover:', error);
+                return { success: false, message: 'Error de conexión' };
+            });
+    }
+
+    // Función para consultar el estado del rover
+    function estadoRover() {
+        return fetch(`/api/rover/estado/`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+            .then(response => response.json())
+            .catch(error => {
+                console.error('Error al consultar estado:', error);
+                return { success: false, message: 'Error de conexión' };
+            });
+    }
+
+    // Función para compilar y ejecutar código en el rover físico
+    function compilarYEjecutarEnRover() {
+        const code = editor.getValue();
+
+        // Primero compilar el código
+        return fetch('/api/compile/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({ code })
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    logToConsole('Error en la compilación:', 'error');
+                    if (result.errors) {
+                        result.errors.forEach(error => {
+                            logToConsole(`Error en línea ${error.line}, columna ${error.column}: ${error.message}`, 'error');
+                        });
+                    }
+                    return { success: false };
+                }
+
+                logToConsole('Compilación exitosa, enviando al rover...', 'success');
+
+                // Luego ejecutar el código compilado en el rover
+                return fetch('/api/execute/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({ code })
+                });
+            })
+            .then(response => {
+                if (!response || !response.json) {
+                    return { success: false, message: 'Error de compilación' };
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (result.success) {
+                    logToConsole(`Programa enviado al rover con éxito. ID: ${result.execution_id}`, 'success');
+
+                    // Actualizar estado del rover
+                    actualizarEstadoRover('Ejecutando');
+
+                    // Mantener actualizado el estado del rover
+                    const intervalId = setInterval(() => {
+                        estadoRover().then(estado => {
+                            if (estado.success) {
+                                if (!estado.rover_status.ejecutando) {
+                                    clearInterval(intervalId);
+                                    logToConsole('Ejecución completada en el rover', 'success');
+                                    actualizarEstadoRover('Conectado');
+                                }
+                            } else {
+                                clearInterval(intervalId);
+                                logToConsole('Error al consultar estado del rover', 'error');
+                                actualizarEstadoRover('Error');
+                            }
+                        });
+                    }, 1000);
+                } else {
+                    logToConsole(`Error al ejecutar en el rover: ${result.message}`, 'error');
+                    actualizarEstadoRover('Error');
+                }
+                return result;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                logToConsole('Error de conexión con el servidor', 'error');
+                actualizarEstadoRover('Desconectado');
+                return { success: false, message: 'Error de conexión' };
+            });
+    }
+
+    // Funciones para controlar directamente el rover
+    function avanzarRover() {
+        logToConsole('Comando: Avanzar', 'info');
+        enviarComandoRover('avanzar')
+            .then(result => {
+                if (result.success) {
+                    logToConsole('Rover avanzando', 'success');
+                } else {
+                    logToConsole(`Error: ${result.message}`, 'error');
+                }
+            });
+    }
+
+    function retrocederRover() {
+        logToConsole('Comando: Retroceder', 'info');
+        enviarComandoRover('retroceder')
+            .then(result => {
+                if (result.success) {
+                    logToConsole('Rover retrocediendo', 'success');
+                } else {
+                    logToConsole(`Error: ${result.message}`, 'error');
+                }
+            });
+    }
+
+    function girarIzquierdaRover() {
+        logToConsole('Comando: Girar izquierda', 'info');
+        enviarComandoRover('izquierda')
+            .then(result => {
+                if (result.success) {
+                    logToConsole('Rover girando a la izquierda', 'success');
+                } else {
+                    logToConsole(`Error: ${result.message}`, 'error');
+                }
+            });
+    }
+
+    function girarDerechaRover() {
+        logToConsole('Comando: Girar derecha', 'info');
+        enviarComandoRover('derecha')
+            .then(result => {
+                if (result.success) {
+                    logToConsole('Rover girando a la derecha', 'success');
+                } else {
+                    logToConsole(`Error: ${result.message}`, 'error');
+                }
+            });
+    }
+
+    function pararRover() {
+        logToConsole('Comando: Detener', 'info');
+        detenerRover()
+            .then(result => {
+                if (result.success) {
+                    logToConsole('Rover detenido', 'success');
+                } else {
+                    logToConsole(`Error: ${result.message}`, 'error');
+                }
+            });
+    }
+
+    // Función para actualizar el estado del rover en la interfaz
+    function actualizarEstadoRover(estado) {
+        const statusSpan = roverStatus.querySelector('span');
+        statusSpan.textContent = estado;
+
+        // Cambiar la clase de la etiqueta según el estado
+        statusSpan.className = 'badge';
+
+        switch (estado) {
+            case 'Conectado':
+                statusSpan.classList.add('bg-success');
+                break;
+            case 'Ejecutando':
+                statusSpan.classList.add('bg-primary');
+                break;
+            case 'Error':
+                statusSpan.classList.add('bg-danger');
+                break;
+            case 'Desconectado':
+            default:
+                statusSpan.classList.add('bg-secondary');
+                break;
+        }
+    }
+
+    // Comprobar conexión con el rover al cargar la página
+    function comprobarConexionRover() {
+        estadoRover()
+            .then(result => {
+                if (result.success) {
+                    actualizarEstadoRover('Conectado');
+                    logToConsole('Rover conectado', 'success');
+                } else {
+                    actualizarEstadoRover('Desconectado');
+                    logToConsole('Rover desconectado', 'warning');
+                }
+            })
+            .catch(() => {
+                actualizarEstadoRover('Desconectado');
+                logToConsole('Rover desconectado', 'warning');
+            });
+    }
+
+    // Eventos de botones
+    btnCompile.addEventListener('click', () => {
+        currentProgram = compile();
+        if (currentProgram) {
+            logToConsole('El programa está listo para simular o ejecutar.', 'success');
+        }
+    });
+
+    btnSimulate.addEventListener('click', () => {
+        if (!currentProgram) {
+            currentProgram = compile();
+        }
+
+        if (currentProgram) {
+            simulate(currentProgram);
+        } else {
+            logToConsole('Por favor, compila el programa primero.', 'warning');
+        }
+    });
+
+    btnExecute.addEventListener('click', () => {
+        logToConsole('Compilando y ejecutando en el rover físico...', 'info');
+        compilarYEjecutarEnRover();
+    });
+
+    // Eventos de zoom
+    btnZoomIn.addEventListener('click', () => {
+        setZoom(zoomLevel + 0.1);
+    });
+
+    btnZoomOut.addEventListener('click', () => {
+        setZoom(zoomLevel - 0.1);
+    });
+
+    btnResetView.addEventListener('click', () => {
+        setZoom(1);
+        resetRover();
+        logToConsole('Vista reiniciada.', 'info');
+    });
+
+    // Eventos de archivo
+    btnNew.addEventListener('click', () => {
+        editor.setValue(`PROGRAM mi_programa
+BEGIN
+    
+END.`);
+        currentProgram = null;
+        resetRover();
+        logToConsole('Nuevo programa creado.', 'info');
+    });
+
+    btnOpen.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                editor.setValue(event.target.result);
+                logToConsole(`Archivo ${file.name} cargado.`, 'info');
+                currentProgram = null;
+            };
+            reader.readAsText(file);
+        }
+    });
+
+    btnSave.addEventListener('click', () => {
+        const code = editor.getValue();
+
+        // Si ya se estableció un nombre de archivo, guardar directamente
+        if (filenameInput.value) {
+            saveFile(filenameInput.value, code);
+        } else {
+            saveModal.show();
+        }
+    });
+
+    btnSaveAs.addEventListener('click', () => {
+        saveModal.show();
+    });
+
+    btnConfirmSave.addEventListener('click', () => {
+        const filename = filenameInput.value || 'mi_programa';
+        const code = editor.getValue();
+        saveFile(filename, code);
+        saveModal.hide();
+    });
+
+    // Botones de control directo del rover
+    btnForward.addEventListener('click', avanzarRover);
+    btnBackward.addEventListener('click', retrocederRover);
+    btnLeft.addEventListener('click', girarIzquierdaRover);
+    btnRight.addEventListener('click', girarDerechaRover);
+    btnStop.addEventListener('click', pararRover);
+
+    // Función para guardar el archivo
+    function saveFile(filename, content) {
+        if (!filename.endsWith('.umgpp')) {
+            filename += '.umgpp';
+        }
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        logToConsole(`Programa guardado como ${filename}`, 'success');
+    }
+
+    // Cargar coreografías predefinidas
+    coreografiaLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const coreografia = e.target.getAttribute('data-coreografia');
+
+            let code = '';
+
+            switch (coreografia) {
+                case 'coreografia1':
+                    code = `PROGRAM robot_dance
+BEGIN
+    avanzar_mts(1);
+    rotar(2);
+    girar(1) + avanzar_ctms(50);
+    girar(-1) + avanzar_ctms(50);
+    rotar(-1);
+    caminar(5);
+    moonwalk(3);
+    rotar(1);
+END.`;
+                    break;
+                case 'coreografia2':
+                    code = `PROGRAM moonwalk_magic
+BEGIN
+    moonwalk(5);
+    girar(1) + moonwalk(3);
+    girar(-1) + moonwalk(3);
+    rotar(2);
+    moonwalk(-4);
+    girar(0) + avanzar_mts(1);
+    circulo(50);
+END.`;
+                    break;
+                case 'coreografia3':
+                    code = `PROGRAM geometria_ritmica
+BEGIN
+    cuadrado(100);
+    rotar(1);
+    circulo(50);
+    girar(1) + avanzar_ctms(80);
+    cuadrado(50);
+    girar(-1) + avanzar_ctms(80);
+    circulo(30);
+    rotar(-2);
+END.`;
+                    break;
+            }
+
+            editor.setValue(code);
+            logToConsole(`Coreografía "${e.target.textContent}" cargada.`, 'info');
+            currentProgram = null;
+        });
+    });
+
+    // Inicialización
+    resetRover();
+    comprobarConexionRover();
+    logToConsole('Editor inicializado. Listo para programar UMG Basic Rover 2.0', 'info');
+</script>

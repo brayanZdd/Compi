@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Registro de Aspirante Conductor{% endblock %}
+
+{% block extra_css %}
+.registro-form {
+max-width: 600px;
+margin: 0 auto;
+padding: 2rem;
+background-color: white;
+}
+
+.avatar-preview {
+width: 150px;
+height: 150px;
+border-radius: 50%;
+object-fit: cover;
+margin: 1rem auto;
+display: block;
+border: 2px solid #ddd;
+}
+{% endblock %}
+
+{% block content %}
+<div class="card registro-form">
+    <h2 class="text-center mb-4">Registro de Aspirante Conductor</h2>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {% if error %}
+        <div class="alert alert-danger">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre completo</label>
+            <input type="text" class="form-control" id="nombre" name="nombre" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="correo" class="form-label">Correo electrónico</label>
+            <input type="email" class="form-control" id="correo" name="correo" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="telefono" class="form-label">Teléfono (WhatsApp)</label>
+            <input type="tel" class="form-control" id="telefono" name="telefono" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="nickname" class="form-label">Nickname</label>
+            <input type="text" class="form-control" id="nickname" name="nickname" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="password" class="form-label">Contraseña</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="confirmar_password" class="form-label">Confirmar contraseña</label>
+            <input type="password" class="form-control" id="confirmar_password" name="confirmar_password" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="avatar" class="form-label">Avatar (imagen o foto)</label>
+            <input type="file" class="form-control" id="avatar" name="avatar" accept="image/*" required>
+            <img id="avatar-preview" class="avatar-preview mt-2" src="/static/images/default-avatar.png"
+                alt="Avatar Preview">
+        </div>
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Registrarse</button>
+            <p class="mt-3">¿Ya tienes cuenta? <a href="{% url 'login' %}">Inicia sesión</a></p>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Función para previsualizar la imagen del avatar
+    document.getElementById('avatar').addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                document.getElementById('avatar-preview').src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+</script>
+{% endblock %}
